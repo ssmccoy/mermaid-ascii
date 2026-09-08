@@ -17,6 +17,7 @@ const (
 var (
 	// participantRegex matches participant declarations: participant [ID] [as Label]
 	participantRegex = regexp.MustCompile(`(?i)^\s*participant\s+(?:"([^"]+)"|(\S+))(?:\s+as\s+(.+))?$`)
+	actorRegex       = regexp.MustCompile(`(?i)^\s*actor\s+(?:"([^"]+)"|(\S+))(?:\s+as\s+(.+))$`)
 
 	// messageRegex matches messages: [From][()][arrow][()][To]: [Label]. The
 	// arrow is one of mermaid's ten message types: ->> / -->> (arrowhead),
@@ -383,7 +384,7 @@ func Parse(input string) (*SequenceDiagram, error) {
 			continue
 		}
 
-		if matched, err := sd.parseParticipant(trimmed, participantMap); err != nil {
+		if matched, err := sd.parseActorOrParticipant(trimmed, participantMap); err != nil {
 			return nil, fmt.Errorf("line %d: %w", i+2, err)
 		} else if matched {
 			continue
@@ -451,6 +452,25 @@ func Parse(input string) (*SequenceDiagram, error) {
 	}
 
 	return sd, nil
+}
+
+func (sd *SequenceDiagram) parseActorOrParticipant(line string, actors map[string]*Actor, participants map[string]*Participant) (bool, error) {
+	if ok, err := sd.parseActor(line, actors); ok || err != nil {
+		return ok, err
+	}
+
+	if ok, err := sd.parseParticipant(line, actors); ok || err != nil {
+		return ok, err
+	}
+
+	return false, nil
+}
+
+func (sd *SequenceDiagram) parseActor(line string, actors map[string]*Actor) (bool, error) {
+	match := actorRegex.FindStringSubmatch(line)
+	if match == nil {
+		return false, nil
+	}
 }
 
 func (sd *SequenceDiagram) parseParticipant(line string, participants map[string]*Participant) (bool, error) {
